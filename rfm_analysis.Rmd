@@ -1,0 +1,74 @@
+---
+title: "Customer Behavior Report"
+author: "Phillip Beagley"
+date: "2025-05-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(here)
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load data}
+rfm <- read_csv(here("rfm_summary.csv"), show_col_types = FALSE)
+
+rfm_segmented <- rfm %>%
+  mutate(
+    recency_segment = case_when(
+      recency_days <= 30 ~ "Active",
+      recency_days <= 90 ~ "Warm",
+      TRUE ~ "Churn Risk"
+    ),
+    frequency_segment = case_when(
+      order_frequency >= 15 ~ "High Freq",
+      order_frequency >= 5 ~ "Medium Freq",
+      TRUE ~ "Low Freq"
+    ),
+    monetary_segment = case_when(
+      total_monetary_value >= 3000 ~ "High Value",
+      total_monetary_value >= 1000 ~ "Mid Value",
+      TRUE ~ "Low Value"
+    )
+  )
+```
+
+```{r recency segment plot}
+rfm_segmented %>%
+  count(recency_segment) %>%
+  ggplot(aes(x = recency_segment, y = n, fill = recency_segment)) +
+  geom_col() +
+  labs(
+    title = "Customer Recency Segments",
+    x = "Recency Segment",
+    y = "Number of Customers"
+  ) +
+  theme_minimal()
+```
+
+```{r frequency x monetary heatmap}
+rfm_segmented %>%
+  count(frequency_segment, monetary_segment) %>%
+  ggplot(aes(x = frequency_segment, y = monetary_segment, fill = n)) +
+  geom_tile() +
+  geom_text(aes(label = n), color = "white", fontface = "bold") +
+  labs(
+    title = "Customer Distribution by Frequency and Value",
+    x = "Frequency Segment",
+    y = "Monetary Segment",
+    fill = "Customer Count"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.background = element_rect(fill = "white", color = NA),
+    panel.background = element_rect(fill = "white", color = NA)
+  )
+```
+
+## Key Takeaways
+
+- **Most customers** are in the Mid Value, Low Frequency segment.
+- **A meaningful number** are High Value + Medium Frequency — likely your most loyal.
+- The **Churn Risk group** is large — retention efforts could be impactful here.
+
